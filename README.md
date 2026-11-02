@@ -1,521 +1,486 @@
-# GridWM-Judge: Generation, Inference And Scoring
+# Towards Reliable VLM Judges: State-Conditional Invariance and Presentation-Aware Diagnostics
 
-Generate fresh simulator images, assemble MiniGrid, MiniWorld and Habitat
-exams, run remote model APIs from request bundles, and score recorded model
-responses. Images, requests and responses remain outside the source repository.
+[Qinan Zhang](https://openreview.net/profile?id=~Qinan_Zhang2)<sup>*</sup>, [Xinyu Wang](https://openreview.net/profile?id=~Xinyu_Wang65)<sup>*</sup>, [Qihang Jin](https://openreview.net/profile?id=~Qihang_Jin1)<sup>*</sup>, [Tianyuan Wang](https://openreview.net/profile?id=~Tianyuan_Wang2), [Jian Di](https://openreview.net/profile?id=~Jian_Di1), [Hongbing Luo](https://openreview.net/profile?id=~Hongbing_Luo1), [Pengfei Li](https://openreview.net/profile?id=~Pengfei_Li24), [Wenjun Lv](https://openreview.net/profile?id=~Wenjun_Lv1), [Yu Kang](https://openreview.net/profile?id=~Yu_Kang5)
 
-```text
-scripts/*.sh -> tools/ workflows -> tools/ generators/builders
-                                 -> utils/ leaf helpers
-                                 -> installed simulator dependencies
-```
+<sup>*</sup> Equal contribution (co-first authors).
 
-## Task And Experiment Modules
+<p align="center">
+  <a href="#overview">Overview</a> &middot;
+  <a href="#quick-start">Quick Start</a> &middot;
+  <a href="#installation">Installation</a> &middot;
+  <a href="#experiments">Experiments</a> &middot;
+  <a href="#model-inference">Model Inference</a> &middot;
+  <a href="#additional-experiments">Additional Experiments</a> &middot;
+  <a href="#repository-layout">Repository Layout</a>
+</p>
 
-MiniGrid task ownership is explicit. Simulator trajectories, source parsing,
-quality gates and image composition are shared, rather than copied into each
-task. Base and expanded cohorts use explicitly named builders.
+Vision-language models (VLMs) are increasingly used as automated judges for multimodal and embodied tasks, yet aggregate accuracy or consistency alone does not reveal whether a judge changes its verdict for the right reason. We propose State-Conditional Invariance (SCI), a reliability principle requiring a judge to remain stable under semantics-preserving presentation changes while responding to causal interventions that change the task outcome. We instantiate SCI in GridWM-Judge, a simulator-grounded diagnostic benchmark built from deterministic MiniGrid trajectories with aligned Full, evidence-removal, and counterfactual variants, plus presentation and representation probes. Across five diagnostic tasks, GridWM-Judge tests local perception, action-conditioned transitions, presentation stability, representation exchangeability, and Full-CF causal discrimination. Evaluating current VLM judges reveals separable failures, including presentation sensitivity, representation fragility, causal misgrounding, action-insensitive heuristics, and stability traps. These results show that reliable VLM-as-a-judge evaluation requires joint reporting of correctness, presentation invariance, and causal sensitivity rather than a single accuracy or consistency score.
 
-| Module | Responsibility |
-| --- | --- |
-| `tools/minigrid/task_a.py` | Transition-choice construction and candidate uniqueness checks; its CLI takes a source manifest. |
-| `tools/minigrid/task_b.py` | Native visible-state B construction; standalone CLI takes an environment triplet root. |
-| `tools/minigrid/task_c.py` | Storyboard judgment construction, task prompts and optional matched presentation conditions. |
-| `tools/minigrid/task_d.py` | Base/final D construction and exact-mission independent-reference matching. |
-| `tools/minigrid/task_e.py` | Object identity/status question assembly and event/label helpers. |
-| `tools/minigrid/base_task_a.py` | Base A action-matched, state-ranked distractors; optional explicit cohort UID selection. |
-| `tools/minigrid/base_task_b.py` | Frame selection, visible-state answers and DoorKey view re-anchoring. |
-| `tools/minigrid/base_task_c.py` | Base C event-anchored evidence, six temporal/visual conditions and three framing conditions. |
-| `tools/minigrid/base_task_d.py` | Base D reference/query assembly with four presentation conditions per query. |
-| `tools/minigrid/exam_source.py` | Shared trajectory parsing, state/negative-choice helpers and storyboard selection. No task batch CLI. |
-| `tools/minigrid/build_exams.py` | Thin A/C/D base assembly orchestration, delegates task logic to the modules above. |
-| `tools/experiments/structured_cot.py` | Three-arm C/D prompt experiment request construction only. No API calls or scoring. |
-| `tools/miniworld/generate_templates.py` | Selectable round1/round2/round3 template packs. |
-| `tools/miniworld/build_requests.py` | Native A/C/reference-D request export; also called after MiniWorld generation. |
+## Overview
 
-Leaf helpers under `utils/` implement MiniGrid image panels, B/C/D prompts,
-NoCue calculations, Habitat I/O and configuration/trajectory data types.
-They import no project modules and run no other files. Environment-specific
-CF/NoCue semantics and renderer process isolation remain separate.
+<p align="center"><em>Overview figure placeholder</em></p>
 
-## MiniGrid Environments
-
-Environment adapters are separate from the Task A/B/C/D/E exam builders:
+<!-- Replace the placeholder above with the overview figure when supplied. -->
 
 ```text
-tools/minigrid/environments/
-├── doorkey.py
-├── keycorridor.py
-├── lavagap.py
-├── memory.py
-├── multiroom.py
-└── redblue.py
+Simulator trajectories → Images and exams → Model responses → Scores and CIs
 ```
 
-Each module provides `generate` and `validate` commands. The generated
-trajectory pool is then consumed by the task builders. For example:
-
-```bash
-bash scripts/_launch.sh tools.minigrid.environments.doorkey generate \
-  --out-dir /external/new-doorkey --num 2 --seed-start 1000 \
-  --env-id MiniGrid-DoorKey-8x8-v0
-bash scripts/_launch.sh tools.minigrid.environments.doorkey validate \
-  --root /external/new-doorkey
-```
-
-Use `generate --help` or `validate --help` for environment-specific options.
-`tools/minigrid/environment_registry.py` defines the adapter paths, environment
-IDs and default generation/validation arguments used by the bank workflow.
-Validation summaries retain environment-specific formats; check the reported
-failure counts, not only the process exit status.
-
-For example, construct the three-arm experiment from generated C/D requests:
-
-```bash
-bash scripts/build_experiment.sh \
-  --source-requests /external/run/requests_ACD_full.jsonl \
-  --output-dir /external/new-three-arm
-```
-
-The arms are `direct_original`, `structured_direct`, and
-`structured_cot_v1`. Default expected group counts are C101/D98.
-Bundles use `task_context_matched_v2`: all Task C
-arms share the same environment description and simulator mission, including
-the direct arm; only the response/evidence instructions differ. Missing Task C
-missions are rejected. Task D continues to infer the objective from its known
-successful reference, without exposing its scoring-only mission. For a
-different cohort, pass `--expected-c-groups` and `--expected-d-groups` explicitly.
-
-## Model Inference
-
-### Oracle-State Control
-
-Build a three-condition Oracle exam from generated mission-matched
-Task D rows and the simulator triplet banks used for those reference/query
-episodes:
-
-```bash
-bash scripts/build_experiment.sh oracle-state \
-  --source-manifest /external/minigrid/manifests/taskD_expanded_manifest.jsonl \
-  --raw-root /external/minigrid/work/fresh/raw_bank \
-  --reference-root /external/minigrid/references/existing \
-  --reference-root /external/minigrid/references/generated \
-  --output-dir /external/new-oracle-v4
-```
-
-Repeat the bank arguments if needed. Query banks also supply eligible
-references; extra reference banks supply independently generated examples.
-Input episodes must resolve uniquely, have matching missions and complete
-Full/NoCue/CF groups, and include the required state fields. Each group uses a
-fixed reference. Invalid inputs raise an error. Rows with explicit
-`query_raw_root`/`reference_raw_root` may resolve their banks without overrides.
-
-Each source group produces nine requests: Full/NoCue/CF crossed with
-`pixel_only`, `oracle_state_only`, and `pixel_plus_oracle_state`. The state
-conditions use the recorded simulator `state_seq`, actions, initial/final
-objects and derived carrying/door/spatial facts. They are not captions inferred
-from images. State-only requests have no images; both pixel conditions retain
-the original reference/query composite pixels. The NoCue trace uses its own
-recorded state sequence rather than the Full trace. The `nocue_mask_aware_v1`
-evidence policy removes suppressed targets before formatting inventories,
-relations and events. Protected targets can reappear only at unmasked steps
-where the recorded observation supports them. An empty post-mask visibility
-list is never replaced by world truth; unknown front/carrying observations are
-described as unobserved rather than empty space. Simulator outcomes remain unchanged.
-This is targeted suppression of NoCue evidence, not a full conversion of all
-world-state facts to pixel-only visibility. Success/Fail labels and native
-scoring remain simulator-grounded; missing evidence is not a failure label.
-Request UIDs include the evidence policy. Responses must match the exact
-request bundle and evidence policy being scored.
-
-Every condition presents the same six possible task types and asks for
-`TASK_TYPE`, `INFERRED_OBJECTIVE`, `VERDICT`, and `EXPLANATION`. The model must
-infer the specific objective from the completed reference. The actual mission,
-environment identity, success flags and answer labels are kept in local exam
-metadata for matching/scoring and are not added to model-facing evidence.
-
-Outputs are `exam/task_d_exam.jsonl`, `requests_oracle_state_v4.jsonl`, and
-three files under `requests_by_condition/`, plus copied images outside the
-source tree. Run inference using the combined or condition-specific requests.
-Use the hierarchical Oracle parser, not the ordinary binary Task D parser,
-for these four-field responses. To write only per-question scores:
-
-```bash
-bash scripts/score.sh --protocol oracle_state_v4_native_v1 --per-row-only \
-  --requests /external/new-oracle-v4/requests_oracle_state_v4.jsonl \
-  --responses /external/oracle-run/responses.jsonl --model your-model-id \
-  --output /external/new-oracle-scores
-```
-
-This writes `native/scored_rows.jsonl`, covering parsed task type, objective,
-verdict, explanation-presence flags and their existing automatic scores.
-It does not bootstrap or generate statistical tables. Statistical reports
-are available when `--per-row-only` is absent.
-
-Select the three-arm builder with
-`bash scripts/build_experiment.sh structured-cot ...`; omitting the experiment
-name selects the same builder.
-
-### Optional Task C Presentation Profile
-
-Task C keeps its ordinary generation behavior by default. To export matched
-presentation requests explicitly, use the same task module:
-
-```bash
-bash scripts/_launch.sh tools.minigrid.task_c --profile matched-probes \
-  --source /external/taskC_expanded_manifest.jsonl \
-  --output-dir /external/new-taskc-probes
-```
-
-The source must have complete clean-neutral Full/CF pairs and access to their
-raw triplets via `source_raw_root` (or an explicit `--raw-root`). NoCue is not
-included. Each pair produces eight requests: Full/CF crossed with clean,
-noise, style and temporal reversal. Every condition uses the same selected
-frames, action/outcome labels and source prompt; reversal adds an explicit
-ordering note and reverses the timestamp labels with the frames. Clean is
-exported as a request too, to be evaluated in the same run. The clean pixels
-are checked against the raw-frame
-storyboard before export. Images, exam rows and requests are written outside
-the source tree.
-
-The optional profile uses these transform settings:
-Gaussian noise with sigma 20 and deterministic per-frame seeds, and the
-edge-preserving style filter. The ordinary Task C profile uses separate mild
-noise/color transforms.
-`source_uid` and `presentation_arm` identify each condition without altering
-the original exam. Use the regular inference and SSOT scoring entries on
-the generated `_requests_from_manifest/requests_C.jsonl` and `exam/` directory.
-
-MiniGrid Task A request construction exports both representations by default.
-The normal `exam/task_a_exam.jsonl` and `_requests_from_manifest/requests_A.jsonl`
-are Composite. `split/exam/task_a_exam.jsonl` and `split/requests_A.jsonl`
-contain the matching five-image condition. Both have the same prompt, UID,
-action, candidate order and answer; keep their response streams in separate
-run directories. Split crops retain the exact panel pixels and dimensions,
-without resampling. Each request records `representation` and `source_uid`.
-The combined A/C/D or A/B/C/D/E bundle retains only the Composite A arm, so
-question counts and response UID uniqueness are unchanged. Run and score
-the Split A bundle separately with the same decoding settings.
-
-`scripts/infer.sh` consumes an external request JSONL with `uid`, `prompt`, an
-ordered `images` list, and optional `exam` metadata. Use `images: []` for a
-text-only condition. Relative image paths resolve from the request file's
-directory. Only prompt text and images are sent; answer keys and audit state
-in `exam` are retained locally for scoring, not added to the API payload.
-
-| Location | Responsibility |
-| --- | --- |
-| `scripts/infer.sh` | Repository-independent shell launcher. |
-| `tools/inference/run.py` | Input validation, bounded concurrency, sharding, resume, progress and response writing. |
-| `tools/inference/client.py` | HTTP transport, shared rate limit and transient-error retries. |
-| `utils/inference_payload.py` | Leaf PNG encoding, payload construction and unparsed provider-text extraction. |
-
-Choose `--protocol chat`, `responses`, or `gemini` explicitly. Supply the exact
-provider model ID and API base URL; no model aliases or alternate routes are
-substituted automatically. Chat/Responses base URLs normally include `/v1`;
-Gemini accepts a service root or a root ending in `/v1beta`. This entry covers
-remote APIs, not local model-weight inference or native Anthropic messages.
-
-Validate without a key, API calls, or output files:
-
-```bash
-bash scripts/infer.sh --requests /external/requests.jsonl \
-  --protocol chat --base-url https://your-provider.example/v1 \
-  --model your-exact-model-id --max-tokens 8192 \
-  --output /external/new-run --dry-run
-```
-
-For a real run, set `VLM_API_KEY` in your environment, or pass an external
-`--env-file` and the variable name with `--api-key-env`. Never place credentials
-in CLI arguments, request bundles or provider extra-body JSON.
-
-```bash
-bash scripts/infer.sh --requests /external/requests.jsonl \
-  --protocol chat --base-url https://your-provider.example/v1 \
-  --model your-exact-model-id --max-tokens 8192 --temperature 0 \
-  --workers 2 --rps 1 --output /external/new-run
-
-bash scripts/score.sh --protocol historical_ssot_v1 \
-  --exam-dir /external/exam --responses /external/new-run/responses.jsonl \
-  --output /external/new-scores
-```
-
-Decoding parameters must match the experiment configuration: the example
-budget is not a universal setting. Temperature and seed are omitted
-unless explicitly supplied. Images use lossless RGB PNG, without resizing by
-default; `--max-side` records an explicit resize. Per-row `api_content_order`
-and `api_image_detail` override the corresponding CLI defaults. Split images
-retain their order and are never automatically fused. Provider-specific options
-may be supplied through `--extra-body /external/options.json`, but cannot
-override model, prompt/images, token budget, temperature, seed or streaming.
-Environment proxy settings are ignored unless `--trust-env` is supplied.
-
-Each output directory contains `responses.jsonl`, `run_config.json`, and
-`run_summary.json`. Response `raw`/`pred`, `meta.ok`, `meta.exam`, finish reason
-and usage follow the offline scorer contracts; complete provider JSON and retry
-attempts are also retained. Transport/429/selected 5xx errors receive bounded
-retries; authorization, quota-denied and model-name errors are not retried
-indefinitely. Truncated, refused, malformed or incorrect answers are never
-automatically retried to improve scores. Provider finish reasons are preserved.
-Runs containing API errors exit with code 2 and keep all records for inspection.
-
-Repeat the same command with `--resume` after an interruption. Request/image
-hashes and effective configuration must match; changing only the API key is
-allowed. All saved UIDs are skipped, including saved API errors. Failed rows
-must be rerun as an explicit, separate request subset/output; they are not
-silently replaced. Duplicate/unexpected IDs and incomplete JSONL tails fail
-without truncating the file. Only one writer may own an output directory.
-For independent processes, use `--num-shards N --shard-id I` and distinct output
-directories; merge only disjoint response shards before scoring.
-
-## Offline Scoring
-
-Add `--per-row-only` to write per-question results to `native/scored_rows.jsonl`,
-together with the scoring receipt and log. Result fields follow the selected
-task protocol. This mode checks UID coverage and applies the protocol's parsing
-and correctness rules. Bootstrap overrides cannot be combined with
-`--per-row-only`; omit it to generate the protocol's standard reports.
-
-Scoring implementations are in `tools/scoring/`. Supply external exam and
-response files, and select the task protocol with `--protocol`. Each protocol
-defines its parser, scoring denominator and statistical defaults.
-
-| Protocol | Inputs | Parsing And Statistics |
+| Dataset | Tasks | Formal Questions |
 | --- | --- | --- |
-| `historical_ssot_v1` | MiniGrid A/B/C/D/E exam directory and response JSONL | SSOT formatting recovery; B weights, denominator .90 and Acc threshold .90. Optional A/C/D cluster bootstrap with `--ci`. |
-| `miniworld_a_native_v1` | A exam JSONL and responses | Native successor-option parser and metrics. |
-| `miniworld_c_native_v1` | C exam JSONL and responses | Native verdict parser and metrics. |
-| `miniworld_d_native_v1` | Trajectory D exam JSONL and responses | Native trajectory-D parser, distinct from reference-family D. |
-| `miniworld_reference_native_v1` | Reference-family D exam JSONL and responses | Native reference/query D parser and metrics. |
-| `structured_native_v1` | Three-arm requests, responses and model ID | Native strict/recoverable parsing; 20,000 bootstrap iterations, seed 20260724. |
-| `oracle_state_v4_native_v1` | Oracle-state v4 requests, responses and model ID | Native four-field parsing/recovery; 20,000 bootstrap iterations, seed 20260725. |
-| `habitat_native_v1` | Exam directory with answer_key.json, responses and model ID | Last-option/last-verdict parser with explicit missing/error handling. |
+| MiniGrid | A/B/C/D/E | A103, B144, C486, D144; E uses all valid event checkpoints |
+| Scale-2 MiniGrid | A/C/D | A1,030, C1,326, D1,296 |
+| MiniWorld | A/C/D | A80, C84, D50 |
+| Habitat/HSSD | A/C/D | A150, C200, D200 |
+
+## Quick Start
+
+Install the [core environment](#installation), then set `MODEL`,
+`VLM_BASE_URL` and `VLM_API_KEY` for your API provider. This runs a small
+MiniGrid generation, inference and scoring workflow:
 
 ```bash
-bash scripts/score.sh --protocol historical_ssot_v1 \
-  --exam-dir /external/exam --responses /external/responses.jsonl \
-  --output /external/new-scores
+export RUN_ROOT="$HOME/gridwm-runs"
 
-bash scripts/score.sh --protocol historical_ssot_v1 \
-  --exam-file /external/task_d_r_exam.jsonl --exam-task D \
-  --responses /external/requests_D.jsonl --output /external/new-task-dr-scores
+bash scripts/generate_minigrid.sh --profile smoke \
+  --output "$RUN_ROOT/quickstart"
 
-bash scripts/score.sh --protocol miniworld_reference_native_v1 \
-  --exam-file /external/task_d_exam.jsonl \
-  --responses /external/responses.jsonl --output /external/new-mw-d-scores
+bash scripts/infer.sh \
+  --requests "$RUN_ROOT/quickstart/minigrid/bundle/_requests_from_manifest/requests_ABCDE_full.jsonl" \
+  --protocol chat --base-url "$VLM_BASE_URL" --model "$MODEL" \
+  --max-tokens 8192 --temperature 0 --workers 2 --rps 1 \
+  --output "$RUN_ROOT/quickstart-responses"
 
-bash scripts/score.sh --protocol structured_native_v1 \
-  --requests /external/requests_structured_cot_ablation.jsonl \
-  --responses /external/responses.jsonl --model gpt-5.4 \
-  --output /external/new-cot-scores
-
-bash scripts/score.sh --protocol habitat_native_v1 \
-  --exam-dir /external/habitat-exam --responses /external/responses.jsonl \
-  --model gpt-5.4 --output /external/new-habitat-scores
+bash scripts/score.sh --protocol minigrid \
+  --exam-dir "$RUN_ROOT/quickstart/minigrid/bundle/exam" \
+  --responses "$RUN_ROOT/quickstart-responses/responses.jsonl" \
+  --per-row-only --output "$RUN_ROOT/quickstart-scores"
 ```
 
-MiniGrid Task D uses a successful reference trajectory and a query
-trajectory. D-R is an alias for this reference/query design. Both use the same SSOT
-scorer: `--exam-task D`, `DR`, and `D-R` select the same task. With `--exam-dir`,
-either `task_d_exam.jsonl` or `task_d_r_exam.jsonl` is accepted.
-If both filenames exist, explicitly select one using `--exam-file --exam-task D`.
-Filename aliases are created only in the external runtime output; original
-exam bytes and response UIDs are never rewritten. The response filename alone
-does not identify its matching exam: `DR.*` responses require
-the corresponding `DR.*` exam rows, not unrelated newly generated questions or `D.*`
-single-trajectory questions. Missing predictions retain the selected native
-scorer's denominator and handling.
-Duplicate or unexpected response IDs are rejected before scoring;
-resolve retry selection explicitly rather than silently taking the last row.
-Supply one response JSONL per invocation, merging only disjoint shards first.
+Add `--dry-run` to inference to validate requests without API calls; omit the
+scoring step until responses have been collected.
 
-Results are in `native/` using the native report formats. The external runtime
-output also contains `scoring_receipt.json` with the protocol, effective
-parameters, coverage and input/source hashes, and `scoring.log`. Existing
-output directories are never overwritten. Model IDs affect native statistical
-seeds; use the actual model ID. Changing `--iterations` or `--seed` for the
-structured/oracle protocols is recorded and is not an exact-default replay.
-
-Strict-only sensitivity analyses are not silently substituted for these
-protocols: several native scorers deliberately accept recoverable answers.
-Add `--ci` to the SSOT scoring command for base MiniGrid or Scale-2 A/C/D:
-
-```bash
-bash scripts/score.sh --protocol historical_ssot_v1 \
-  --exam-dir /external/exam --responses /external/responses.jsonl \
-  --ci --iterations 20000 --seed 20261103 --output /external/scores-with-ci
-```
-
-This writes `native/confidence_intervals.json` and
-`native/confidence_intervals.csv` alongside the native scores. A/C/D accuracy
-uses every gold question, including missing responses and API/parse failures
-under the native scoring rules. C/D also report accuracy by variant and
-complete-triplet diagnostics: `p_active` is the fraction predicting Success
-on Full; `IDR_raw` is the fraction predicting Success on Full and Fail on CF;
-`IDR_cond` divides that joint fraction by `p_active`.
-
-Both 95% percentile intervals resample whole clusters: group bootstrap keeps
-all questions/styles/variants of an `(environment, group_id)` together;
-environment bootstrap keeps each environment intact. Estimates are pooled
-ratios weighted by question counts, not unweighted environment averages.
-Diagnostics match Full/NoCue/CF within environment, group, temporal style,
-visual style, framing and reference identity; incomplete triplets are counted
-separately and excluded only from these paired diagnostics. Zero-active conditional replicates are counted as
-undefined. Reports flag slices with fewer than two clusters. Defaults are
-20,000 iterations and seed 20261103; `--ci` cannot be combined with
-`--per-row-only`. Score each model and representation separately using its
-matching exam and response file.
-
-## Run
-
-Activate the core environment or set `PYTHON_BIN` explicitly:
-
-```bash
-bash scripts/generate_and_build.sh --datasets minigrid --profile smoke \
-  --seed 930000 --output /external/new-generation
-
-bash scripts/generate_and_build.sh --datasets minigrid --profile formal \
-  --output /external/new-minigrid-formal
-
-bash scripts/generate_and_build.sh --datasets scale2 --profile formal \
-  --output /external/new-scale2
-
-bash scripts/generate_miniworld.sh --profile formal \
-  --output /external/new-miniworld
-
-bash scripts/generate_habitat.sh --profile smoke \
-  --habitat-python /path/to/habitat-python --habitat-assets /path/to/hssd-hab \
-  --output /external/new-habitat
-```
-
-Use `--datasets scale2 --profile smoke` to generate a small A/C/D exam set and
-Task A Composite/Split requests. Use `--datasets scale2 --profile formal` for
-the formal configuration with A1030/C1326/D1296 questions.
-
-Habitat defaults to software rendering. On WSL with working NVIDIA D3D12
-graphics, add `--habitat-renderer d3d12` to `generate_habitat.sh`. This uses
-system Mesa and the WSL graphics libraries, and verifies the NVIDIA D3D12
-renderer in navigation and interaction logs rather than silently accepting
-software fallback. Native Linux NVIDIA EGL is selected with
-`--habitat-renderer gpu`; it is a different backend from WSL D3D12.
-Rendering acceleration does not move path sampling or PNG encoding to CUDA.
-Use a fresh output directory when changing renderer: `--resume` requires the
-original seed, profile and renderer to avoid mixing rendering backends.
-
-Generation-level `--resume` retains validated completed stages for MiniGrid,
-Scale-2, MiniWorld and Habitat. Repeat the exact generation command with
-`--resume`: the dataset list, seed, profile, interpreter paths, renderer,
-source/configuration fingerprints and completed artifact hashes must match.
-A per-output lock rejects concurrent generators. MiniWorld formal generation
-checkpoints each native builder separately, in the original order.
-
-This is stage-level recovery, not universal sample-level recovery. An incomplete
-MiniGrid/Scale-2/MiniWorld stage that has already written partial artifacts is
-preserved and rejected with an actionable error; use a new output root rather
-than deleting or silently overwriting its files. Habitat's native episode/scene
-recovery remains available. Stale stage records are marked `INTERRUPTED`.
-Runs created before these fingerprints/checkpoints cannot be resumed automatically.
-Completed datasets are hash-checked and skipped without regeneration.
-API inference has its separate UID-based `--resume` contract described above.
-Scoring and supplemental exam builders still require fresh output directories.
-
-Choose a new `--output` directory outside the repository. MiniGrid `smoke`
-uses a small expanded-bank cohort; `formal` uses the base task builders.
-Task A uses action-matched, state-ranked distractors, with `--exam-seed 42`
-and `--task-a-per-traj 6` by default. The formal entry requires 103 questions
-and reports an error if the selected source cohort yields a different count.
-Use `--task-a-cohort` to provide a JSONL of generated UIDs in the desired order.
-
-Formal base Task A generates its own three Full trajectories per environment
-(18 total), separately from the expanded bank. Sampling precedes final candidate
-assembly so candidate deduplication cannot shift later answer permutations.
-The default exam seed is 42 with six sampled transitions per trajectory;
-source generation uses the native base-cohort environment and seed-start settings.
-Use `--task-a-raw-root` to explicitly supply an alternative six-environment source
-cohort.
-
-Task B generates 144 Full-only questions by default, selecting 24 pixel-distinct
-frames per environment across trajectory groups. Answers describe the visible
-simulator observations. Formal generation uses its generated trajectory pool;
-use `--task-b-raw-root` to select another pool. Generation requires enough
-distinct Full frames to meet the requested quota. The standalone builder uses
-the same defaults:
-
-```bash
-python -m tools.minigrid.task_b --root /external/full-trajectory-pool \
-  --out-dir /external/taskb-exam --seed 42
-```
-
-Use `--per-environment` for an explicitly smaller exam, or `--b-per-traj` for
-variable-size per-trajectory sampling. The smoke profile remains a small test.
-
-Task C selects six complete groups per KeyCorridor, MultiRoom and RedBlueDoor
-environment. It uses shared event-anchored variable-keyframe indices and near-square
-storyboards, with six temporal/visual conditions plus three framing overlays on
-original-clean evidence: 486 rows. Task D uses one fixed successful reference and
-two query groups per environment, each with Full/NoCue/CF and clean-neutral,
-clean-positive, clean-negative and style-neutral conditions: 144 rows.
-This base D protocol is separate from Scale-2 exact-mission reference matching.
-Task E generates 24 successful trajectories in each of UnlockPickup and
-BlockedUnlockPickup and constructs identity/status questions at every valid
-event checkpoint. The question count depends on the events in those trajectories.
-Formal Scale-2 retains A1030/C1326/D1296; native
-formal MiniWorld retains A80/C84/D50; formal Habitat targets A150/C200/D200.
-Habitat Task A renders each candidate from the exact same agent pose, using
-forward-2/3/4 and left/right-turn action branches. Each question has four
-distinct action/distance outcomes; every candidate pair must exceed the 0.20
-changed-pixel fraction at an RGB-channel difference threshold of 24. The
-pipeline writes these candidates under `action_candidates/` before selecting
-the final exam. The lower-level `build_candidates.py` state-context pool is
-not the final Task A exam protocol.
-The default runtime seed is 830000. Task E uses its native
-deterministic search and v1.3 construction, including native UID prefixes.
-
-Generation produces images, trajectory records, native exam JSON/JSONL,
-answer files and request bundles where supported. A runtime
-`generation_status.json` records stage progress and failures. Existing native
-quality metadata is used by downstream selection and assembly; it is
-generated outside the source tree, not shipped.
-
-## Dependencies
-
-Use the separate core and Habitat environments described in `environments/`
-and `requirements/`. HSSD scene assets remain external. No upstream simulator
-source is copied into this stage. All project code calls resolve internally.
-Keep these environments separate: Habitat-Sim 0.3.3 requires Pillow 10.4.0,
-whereas the core environment uses Pillow 12.1.1. Do not install the core
-requirements into the Habitat environment. Run `python -m pip check` in each
-environment after installation.
+## Installation
 
 ```bash
 conda env create -f environments/core.yml
 conda run -n gridwm-repro-core python -m pip install -r requirements/core.lock.txt
+conda run -n gridwm-repro-core python -m pip check
+conda activate gridwm-repro-core
+export RUN_ROOT="$HOME/gridwm-runs"
+```
+
+Run examples from the repository root. Launchers also accept full paths from
+other directories. Set `PYTHON_BIN` to select a different core interpreter.
+OpenGL/EGL/GLU libraries and graphics drivers are host requirements.
+
+<details>
+<summary>Habitat environment and scene assets</summary>
+
+```bash
 conda env create -f environments/habitat-linux.yml
 conda run -n gridwm-repro-habitat python -m pip install -r requirements/habitat.lock.txt
-conda run -n gridwm-repro-core python -m pip check
 conda run -n gridwm-repro-habitat python -m pip check
 ```
 
-These specifications pin direct dependencies; they are not a complete
-transitive, platform-independent lockfile. OpenGL/EGL/GLU runtime libraries,
-working graphics drivers and externally licensed HSSD assets are host
-prerequisites, not installed by pip. WSL D3D12 rendering additionally requires
-a working WSLg graphics stack.
+Keep core and Habitat environments separate: they use different Pillow
+versions. Habitat generation takes its interpreter through `--habitat-python`
+and requires externally supplied licensed HSSD assets.
 
-Run launchers from any working directory with `PYTHON_BIN` pointing to the
-core interpreter. Habitat uses its separate interpreter through
-`--habitat-python`.
+</details>
 
-Optional Windows fonts are discovered from `WINDIR` and mounted Windows font
-directories. Set `GRIDWM_FONT_DIR` to supply an explicit font directory.
-Installed Linux fonts and Pillow's default font provide fallbacks. Font choice
-affects text rendering; use the same font files when matching rendered images.
-Temporary launcher directories use `TMPDIR`; paths containing a colon fall
-back to the system default temporary directory for Python import compatibility.
+## Experiments
 
-Native MiniWorld A generators randomize candidate A/B placement without
-fixing Python's global random seed. Correct/distractor content is preserved,
-but repeated runs need not produce the same answer letter.
-The `correct_candidate_agent_*` and `distractor_candidate_agent_*` metadata
-describe the semantic action branches, independent of A/B placement. Swapping
-the displayed options changes their paths and answer letter, not those poses.
+Each workflow generates images, exams and inference requests into a fresh
+external output directory. Use `--profile smoke` for a small run and
+`--profile formal` for the formal question counts above. Default generation
+seed: 830000. Progress is recorded in `generation_status.json` and `logs/`.
+
+The sections below pair each generator with its scorer. Use the shared
+[API inference entry](#model-inference) to collect matching responses.
+Scoring writes `native/`, `scoring_receipt.json` and `scoring.log`;
+`--per-row-only` selects `native/scored_rows.jsonl`.
+
+### MiniGrid And Scale-2
+
+```bash
+bash scripts/generate_minigrid.sh --profile formal \
+  --output "$RUN_ROOT/base"
+
+bash scripts/generate_and_build.sh --datasets scale2 --profile formal \
+  --output "$RUN_ROOT/expanded"
+```
+
+Generation writes these bundles; paths below are relative to `$RUN_ROOT`:
+
+| Bundle | Exam Directory | Request JSONL |
+| --- | --- | --- |
+| Base MiniGrid | `base/minigrid/bundle/exam/` | `base/minigrid/bundle/_requests_from_manifest/requests_ABCDE_full.jsonl` |
+| Scale-2 | `expanded/scale2/work/fresh/requests_validated/exam/` | `expanded/scale2/work/fresh/requests_validated/_requests_from_manifest/requests_ACD_full.jsonl` |
+
+Task A also exports `split/exam/task_a_exam.jsonl` and `split/requests_A.jsonl`
+under its bundle directory. Composite and five-image Split share prompts, UIDs,
+candidate order and answers; run them in separate response directories.
+
+**Score**
+
+```bash
+bash scripts/score.sh --protocol minigrid \
+  --exam-dir "$RUN_ROOT/base/minigrid/bundle/exam" \
+  --responses "$RUN_ROOT/model-runs/minigrid/responses.jsonl" \
+  --ci --output "$RUN_ROOT/scores/minigrid"
+
+bash scripts/score.sh --protocol minigrid \
+  --exam-dir "$RUN_ROOT/expanded/scale2/work/fresh/requests_validated/exam" \
+  --responses /path/to/scale2/responses.jsonl \
+  --ci --output "$RUN_ROOT/scores/scale2"
+```
+
+<details>
+<summary>MiniGrid modules, task configuration and environment commands</summary>
+
+| Code | Role |
+| --- | --- |
+| `tools/minigrid/environment_registry.py`, `environments/*.py` | Environment configuration, trajectory generation and validation |
+| `tools/minigrid/generate_bank.py`, `calibrate_bank.py` | Expanded trajectory pools, selection and size calibration |
+| `tools/minigrid/build_formal.py`, `base_task_*.py` | Base A/B/C/D construction |
+| `tools/minigrid/task_a.py` through `task_e.py` | Task-specific assembly and checks |
+| `tools/minigrid/generate_task_e.py` | Event trajectories for E |
+| `tools/exams/build_requests.py`, `assemble_formal.py` | Exam and request assembly |
+
+Base A selects transitions from 18 generated trajectories using exam seed 42
+and six samples per trajectory. B selects 144 pixel-distinct Full-only frames,
+24 per environment. C uses KeyCorridor, MultiRoom and RedBlueDoor with temporal,
+visual and framing conditions. D compares queries with a successful reference.
+E builds identity/status questions from 24 successful trajectories per environment
+in UnlockPickup and BlockedUnlockPickup; its count depends on observed events.
+Scale-2 covers ten environments overall, including FourRooms, EmptyRandom,
+DynamicObstacles and PutNear.
+
+For an individual environment:
+
+```bash
+bash scripts/_launch.sh tools.minigrid.environments.doorkey generate \
+  --out-dir "$RUN_ROOT/doorkey" --num 2 --seed-start 1000 \
+  --env-id MiniGrid-DoorKey-8x8-v0
+bash scripts/_launch.sh tools.minigrid.environments.doorkey validate \
+  --root "$RUN_ROOT/doorkey"
+```
+
+</details>
+
+<details>
+<summary>MiniGrid scoring rules, confidence intervals and Task D file selection</summary>
+
+Implementation: `tools/scoring/minigrid.py`; intervals:
+`tools/scoring/minigrid_ci.py` and `utils/cluster_bootstrap.py`.
+B uses component weights 0.30/0.15/0.25/0.20 for agent position, carrying,
+front cell and object Jaccard, divided by 0.90; Acc@.90 requires score >= .90.
+
+`--ci` adds `native/confidence_intervals.json` and `.csv` for A/C/D accuracy,
+C/D variant accuracy, `p_active`, `IDR_raw` and `IDR_cond`. Defaults are 20,000
+bootstrap replicates and seed 20261103; intervals are 95% percentile intervals.
+Override the defaults with `--iterations` and `--seed`.
+Group intervals retain every question/style/variant within an environment and
+group; environment intervals retain whole environments. Estimates use pooled
+ratios. `p_active` is Full Success frequency; `IDR_raw` is joint Full Success
+and CF Fail frequency; `IDR_cond` divides by `p_active`. Complete triplets
+match temporal/visual style, framing and reference identity. Missing/API/parse
+failures retain native scoring denominators. Reports count incomplete triplets,
+undefined conditional replicates and slices with fewer than two clusters.
+`--ci` and `--per-row-only` are mutually exclusive.
+
+D, DR and D-R select the same reference/query scorer. For a standalone file:
+
+```bash
+bash scripts/score.sh --protocol minigrid \
+  --exam-file /path/to/task_d_r_exam.jsonl --exam-task D \
+  --responses /path/to/requests_D.jsonl --output "$RUN_ROOT/scores/task-d"
+```
+
+</details>
+
+### MiniWorld
+
+```bash
+bash scripts/generate_miniworld.sh --profile formal \
+  --output "$RUN_ROOT/world"
+
+export MW_ROOT="$RUN_ROOT/world/miniworld"
+export MW_BANK="$MW_ROOT/experiments/generated/miniworld"
+```
+
+| Task | Exam File Under `$MW_BANK` | Requests Under `$MW_ROOT` |
+| --- | --- | --- |
+| A | `taskA-MW-v2-crossenv/task_a_exam.jsonl` | `requests/requests_A.jsonl` |
+| C | `taskC-MW-formal-bank/task_c_exam.jsonl` | `requests/requests_C.jsonl` |
+| D | `taskD-MW-reference-family-exam50/task_d_exam.jsonl` | `requests/requests_D.jsonl` |
+
+MiniWorld A randomizes A/B option placement. Repeated runs can change the
+answer letter while preserving the correct and distractor action branches.
+
+**Score**
+
+```bash
+bash scripts/score.sh --protocol miniworld_a \
+  --exam-file "$MW_BANK/taskA-MW-v2-crossenv/task_a_exam.jsonl" \
+  --responses /path/to/miniworld-a/responses.jsonl --output "$RUN_ROOT/scores/mw-a"
+
+bash scripts/score.sh --protocol miniworld_c \
+  --exam-file "$MW_BANK/taskC-MW-formal-bank/task_c_exam.jsonl" \
+  --responses /path/to/miniworld-c/responses.jsonl --output "$RUN_ROOT/scores/mw-c"
+
+bash scripts/score.sh --protocol miniworld_reference \
+  --exam-file "$MW_BANK/taskD-MW-reference-family-exam50/task_d_exam.jsonl" \
+  --responses /path/to/miniworld-d/responses.jsonl --output "$RUN_ROOT/scores/mw-d"
+```
+
+<details>
+<summary>MiniWorld generation modules and scoring protocols</summary>
+
+| Code | Role |
+| --- | --- |
+| `tools/miniworld/generate_exams.py` | Ordered generation and assembly stages |
+| `generate_fourrooms.py`, `generate_pickup_objects.py`, `generate_put_next.py` | Task A scene and successor candidates |
+| `balance_task_a_labels.py`, `assemble_task_a.py` | Task A option balancing and assembly |
+| `gen_miniworld_taskd_*_showcase.py`, `generate_templates.py` | Scene families for C/D |
+| `gen_taskC_MW_formal_exam.py` | Task C storyboards and variants |
+| `gen_taskD_MW_reference_family_exam50.py` | Task D reference/query pairs |
+| `build_requests.py`, `render_worker.py` | Request export and isolated rendering |
+
+All filenames in this table belong to `tools/miniworld/`.
+
+| Protocol | Implementation | Input |
+| --- | --- | --- |
+| `miniworld_a` | `tools/scoring/miniworld_a.py` | Successor-option A |
+| `miniworld_c` | `tools/scoring/miniworld_c.py` | Full/NoCue/CF C |
+| `miniworld_reference` | `tools/scoring/miniworld_reference.py` | Generated reference/query D |
+| `miniworld_d` | `tools/scoring/miniworld_d.py` | Single-trajectory D input |
+
+Select `miniworld_reference` for the D exam produced by the generation entry.
+Standard MiniWorld reports include `native/score_report.json` and
+`native/score_per_row.jsonl`.
+
+</details>
+
+### Habitat/HSSD
+
+Provide licensed HSSD scene assets and the Habitat interpreter:
+
+```bash
+bash scripts/generate_habitat.sh --profile formal \
+  --habitat-python /path/to/gridwm-repro-habitat/bin/python \
+  --habitat-assets /path/to/hssd-hab \
+  --output "$RUN_ROOT/indoor"
+
+export HAB_ROOT="$RUN_ROOT/indoor/habitat"
+```
+
+The asset root must contain `scenes/`, `scenes-articulated/`,
+`hssd-hab.scene_dataset_config.json` and
+`hssd-hab-articulated.scene_dataset_config.json`.
+
+Outputs under `$HAB_ROOT` include `navigation/`, `interactions/`, `selected/`,
+`action_candidates/`, `exam/` and `requests/`. Task A renders every action
+candidate from the same initial pose. The final exam is in `exam/`, with
+`answer_key.json`; requests are `requests/requests_A.jsonl`, `requests_C.jsonl`
+and `requests_D.jsonl`.
+
+**Score**
+
+```bash
+bash scripts/score.sh --protocol habitat \
+  --exam-dir "$HAB_ROOT/exam" \
+  --responses /path/to/habitat-acd/responses.jsonl \
+  --model "$MODEL" --output "$RUN_ROOT/scores/habitat"
+```
+
+Implementation: `tools/scoring/habitat.py`. It reads `answer_key.json`, matches
+question IDs and scores A options plus C/D verdicts. Supply the combined A/C/D
+responses for the full 550-question exam. Standard reports use the Habitat
+native filenames; `--per-row-only` writes the common `native/scored_rows.jsonl`.
+
+<details>
+<summary>Habitat modules and rendering backends</summary>
+
+| Code | Role |
+| --- | --- |
+| `tools/habitat/dataset/simulator.py`, `generator.py`, `task_design.py` | Simulator setup, navigation trajectories and task definitions |
+| `tools/habitat/generate_navigation.py` | Navigation generation entry |
+| `tools/habitat/generate_interactions.py`, `generate_references.py` | Articulated interactions and independent references |
+| `tools/habitat/select_pairs.py` | Select valid interaction/reference pairs |
+| `tools/habitat/build_candidates.py`, `build_action_candidates.py` | Navigation contexts and same-pose action branches for A |
+| `tools/habitat/build_exams.py` | Assemble A/C/D, images and answer key |
+| `tools/habitat/build_requests.py` | Export A/C/D inference requests |
+
+Select the renderer using `--habitat-renderer software` (default), `gpu`
+(native Linux NVIDIA EGL), or `d3d12` (WSL NVIDIA OpenGL with WSLg). Hardware
+modes verify the renderer. Use a new output directory when changing backends.
+
+</details>
+
+## Model Inference
+
+The same inference entry handles every dataset and experiment:
+
+```bash
+export MODEL="your-exact-model-id"
+export REQUESTS="$RUN_ROOT/base/minigrid/bundle/_requests_from_manifest/requests_ABCDE_full.jsonl"
+
+bash scripts/infer.sh --requests "$REQUESTS" \
+  --protocol chat --base-url https://your-provider.example/v1 \
+  --model "$MODEL" --max-tokens 8192 --temperature 0 \
+  --workers 2 --rps 1 --output "$RUN_ROOT/model-runs/minigrid" --dry-run
+```
+
+For a live run, set `VLM_API_KEY` in the environment and omit `--dry-run`.
+Alternatively use `--env-file /path/to/.env --api-key-env KEY_VARIABLE`.
+Choose a token budget appropriate to the experiment. API protocols are `chat`,
+`responses` and `gemini`; model IDs and base URLs are supplied explicitly.
+
+Change `--requests` and `--output` to run Scale-2 or a MiniWorld/Habitat task
+from the request tables above. Each output contains `responses.jsonl`,
+`run_config.json` and `run_summary.json`. Use separate outputs for each model,
+task and representation. To score Habitat A/C/D together, merge only their
+disjoint response JSONL files into a single file before scoring.
+
+<details>
+<summary>Inference implementation and payload settings</summary>
+
+`tools/inference/run.py` owns validation, concurrency, sharding and resume;
+`client.py` handles transport/retries; `utils/inference_payload.py` builds
+payloads. Only prompts and ordered images are sent to the API. Answer metadata
+stays local. Images are lossless RGB PNG; `--max-side` enables explicit resizing.
+Proxy settings are used only with `--trust-env`.
+
+</details>
+
+## Additional Experiments
+
+<details>
+<summary>Structured-CoT: build requests and score</summary>
+
+```bash
+bash scripts/build_experiment.sh structured-cot \
+  --source-requests /path/to/requests_ACD_full.jsonl \
+  --output-dir "$RUN_ROOT/structured"
+
+bash scripts/score.sh --protocol structured_cot \
+  --requests "$RUN_ROOT/structured/requests_structured_cot_ablation.jsonl" \
+  --responses /path/to/structured/responses.jsonl --model "$MODEL" \
+  --output "$RUN_ROOT/scores/structured"
+```
+
+Builder: `tools/experiments/structured_cot.py`; scorer:
+`tools/scoring/structured_cot.py`. Three arms share the task context and images:
+direct verdict, structured verdict, and structured reasoning plus verdict.
+Defaults expect C101/D98 source groups; use `--expected-c-groups` and
+`--expected-d-groups` for another cohort. Scoring uses 20,000 bootstrap
+replicates and seed 20260724 by default.
+
+</details>
+
+<details>
+<summary>Oracle-State: build requests and score</summary>
+
+```bash
+bash scripts/build_experiment.sh oracle-state \
+  --source-manifest /path/to/taskD_expanded_manifest.jsonl \
+  --raw-root /path/to/query-triplet-bank \
+  --reference-root /path/to/reference-triplet-bank \
+  --output-dir "$RUN_ROOT/oracle"
+
+bash scripts/score.sh --protocol oracle_state \
+  --requests "$RUN_ROOT/oracle/requests_oracle_state_v4.jsonl" \
+  --responses /path/to/oracle/responses.jsonl --model "$MODEL" \
+  --output "$RUN_ROOT/scores/oracle"
+```
+
+Builder: `tools/experiments/oracle_state.py`; scorer:
+`tools/scoring/oracle_state.py`. Conditions are pixel-only, state-only and
+pixel-plus-state. Each asks for task type, inferred objective, verdict and
+explanation. States come from the matched simulator episode. Exact missions
+and outcomes remain local metadata. NoCue suppresses its protected target
+facts, relations and events; unobserved fields are not restored from world
+truth. This targeted policy is distinct from filtering every state fact to
+pixel visibility. Repeat `--raw-root`/`--reference-root` for additional banks.
+Scoring uses 20,000 bootstrap replicates and seed 20260725 by default.
+
+</details>
+
+<details>
+<summary>Task C matched probes: optional presentation profile</summary>
+
+```bash
+bash scripts/_launch.sh tools.minigrid.task_c --profile matched-probes \
+  --source /path/to/taskC_expanded_manifest.jsonl \
+  --output-dir "$RUN_ROOT/matched-probes"
+```
+
+Complete clean-neutral Full/CF pairs produce clean, noise, style and reversed
+conditions with matched frames and prompts. The source must resolve its raw
+triplets through `source_raw_root` or `--raw-root`. Use the exported
+`_requests_from_manifest/requests_C.jsonl` for inference and `exam/` with the
+`minigrid` scorer. This profile is optional, not the Task C default.
+
+</details>
+
+## Repository Layout
+
+```text
+.
+├── scripts/                 # Shell launchers for generation, inference and scoring
+├── tools/
+│   ├── generate_and_build.py
+│   ├── minigrid/            # Task A/B/C/D/E and environment adapters
+│   ├── miniworld/           # Scene generation and Task A/C/D
+│   ├── habitat/             # HSSD navigation, interactions and Task A/C/D
+│   │   └── dataset/         # Simulator and trajectory implementation
+│   ├── exams/               # Exam assembly and request export
+│   ├── experiments/         # Additional experiment builders
+│   ├── inference/           # API execution and response writing
+│   └── scoring/             # Task scorers and confidence intervals
+├── utils/                   # Leaf state, image, I/O and numerical helpers
+├── environments/            # Core and Habitat Conda specifications
+├── requirements/            # Pinned direct Python dependencies
+├── third-party/             # External simulator dependency information
+└── LICENSE
+```
+
+Calls follow `scripts -> tools -> tools/utils`. Utilities import no project
+modules; simulator packages are installed dependencies.
+
+## Outputs And Resume
+
+Generated images, exams, requests and responses stay outside the source tree.
+
+| Stage | Main Outputs |
+| --- | --- |
+| Generation | Images, trajectory records, exam files, request bundles, `generation_status.json` and logs |
+| Inference | `responses.jsonl`, `run_config.json` and `run_summary.json` |
+| Scoring | `native/`, `scoring_receipt.json` and `scoring.log` |
+
+<details>
+<summary>Resume, sharding and runtime settings</summary>
+
+- Generation: repeat the same command with `--resume`. Validated stages are
+  hash-checked and retained. Code, configuration, seed, interpreter and renderer
+  must match. Partial MiniGrid/Scale-2/MiniWorld stages may require a new output
+  root; Habitat also supports native episode/scene recovery.
+- Inference: `--resume` skips all recorded UIDs, including API errors. Rerun
+  failed rows as a separate explicit subset/output. Truncation, refusal or
+  incorrect answers do not trigger automatic retries. API-error runs exit 2.
+- Scoring and experiment builders require fresh output directories. Duplicate
+  or unexpected response IDs are rejected. Merge only disjoint response shards.
+- API requests preserve ordered images, raw provider JSON, finish reasons and
+  retry attempts. Each inference output has one writer; use distinct outputs
+  with `--num-shards`/`--shard-id` for independent processes.
+- `GRIDWM_FONT_DIR` supplies optional fonts; installed system fonts and Pillow
+  provide fallbacks. Use the same fonts for rendered-image parity. Launchers
+  honor `TMPDIR`, with a system-temp fallback for paths containing a colon.
+
+</details>
+
+## License
+
+This repository is distributed under the [MIT License](LICENSE).

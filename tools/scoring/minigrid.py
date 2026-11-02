@@ -15,7 +15,7 @@ Design Principles:
 - Completeness: Every UID gets a score or documented failure reason
 
 Usage:
-    bash scripts/score.sh --protocol historical_ssot_v1 --exam-dir /external/exam \
+    bash scripts/score.sh --protocol minigrid --exam-dir /external/exam \
         --responses /external/responses.jsonl --output /external/scores --per-row-only
 
 Output: JSON report with micro/macro scores, per-task breakdown, failure analysis

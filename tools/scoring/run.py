@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-from tools.scoring.protocols import PROTOCOLS, describe
+from tools.scoring.protocols import PROTOCOLS, canonical_protocol, describe
 from utils.exam_schema import resolve_uid
 from utils.file_hash import sha256
 from utils.json_io import load_jsonl
@@ -217,7 +217,7 @@ def score(args) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--protocol', required=True, choices=sorted(PROTOCOLS))
+    parser.add_argument('--protocol', required=True, type=canonical_protocol, choices=sorted(PROTOCOLS))
     parser.add_argument('--responses', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--exam-dir', type=Path)

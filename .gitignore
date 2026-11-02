@@ -1,210 +1,52 @@
-# API Keys & Environment Config
-# .env: actual API keys (NEVER commit — put real values here)
-# .env.example: template with placeholder values (safe to commit)
+# Credentials and local configuration
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+*.local.json
+*.pem
+*.key
 
-# Paper handoff / review artifacts
-*.pdf
-paper_exports/
-*.gz
-
-# Python cache / build noise
+# Python environments, caches and builds
 __pycache__/
 *.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+/build/
+/dist/
 
-# ===== OPEN SOURCE PUBLISH CLEANUP =====
-# These rules exclude experiment intermediates, paper drafts, and private artifacts
-# from the published repository
+# Runtime data and outputs
+/data/
+/datasets/
+/outputs/
+/runs/
+/results/
+/cache/
+/checkpoints/
+/tmp/
+*.log
+*.jsonl
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.pdf
+*.zip
+*.tar
+*.gz
 
-# FINAL experiment intermediates (exams, VLM outputs, analysis)
-FINAL/
-FINAL/README.md
-FINAL/provenance.md
+# Local review and agent instructions
+/validation_workspace/
+/AGENTS.md
+/AGENT.md
+/Agent.md
 
-# Root-level temporary experiment scripts
-_fix_*.py
-_gen_*.py
-tmp_v6_*.py
-_verify_promptfix2.py
-
-# VLM experiment outputs (02_vlm_outputs contains model responses and scores)
-02_vlm_outputs/
-
-# Paper drafts, results, and exports
-paper/
-paper_results/
-paper_exports/
-reports/
-
-# Project documentation (design docs, project plans)
-docs/
-
-# Empty experimental directories
-fs_probe/
-fs_probe_seq/
-
-# Third-party local models (LLaVA)
-thirdparty/
-
-# Experiment run logs
-runs/
-
-# GridWM non-essential modules (keep only gridwm/evaluate/)
-gridwm/*
-!gridwm/evaluate/
-
-# Scripts: experimental runs and baselines
-scripts/tmp_e2e/
-scripts/runs/
-scripts/baselines/
-
-# Dataset experiment artifacts
-datasets_canonical_closeout_2026-04-03/model_runs/
-datasets_canonical_closeout_2026-04-03/review_all_tasks/
-datasets_canonical_closeout_2026-04-03/nocue_audit/
-datasets_canonical_closeout_2026-04-03/writer_export/
-datasets_canonical_closeout_2026-04-03/_rerun_*/
-datasets_canonical_closeout_2026-04-03/*audit*.pdf
-datasets_canonical_closeout_2026-04-03/*review*.pdf
-datasets_canonical_closeout_2026-04-03/*blind*.pdf
-datasets_canonical_closeout_2026-04-03/*questions*.pdf
-datasets_canonical_closeout_2026-04-03/*answers*.pdf
-datasets_canonical_closeout_2026-04-03/taskd-f/
-datasets_canonical_closeout_2026-04-03/taskd-r/
-# Exam and response files (generated artifacts)
-datasets_canonical_closeout_2026-04-03/*/*exam*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*canonical*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*probe*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*oracle*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*requests*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*responses*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*scores*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*audit*.jsonl
-datasets_canonical_closeout_2026-04-03/*/*summary*.json
-datasets_canonical_closeout_2026-04-03/*/*freeze*.md
-datasets_canonical_closeout_2026-04-03/*/*freeze*.txt
-datasets_canonical_closeout_2026-04-03/*/*prompt*.txt
-datasets_canonical_closeout_2026-04-03/*/*manifest*.json
-datasets_canonical_closeout_2026-04-03/*/*.bak
-
-datasets_miniworld_canonical_closeout_2026-04-09/taskc/gpt54_responses_*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskc/*_zh.pdf
-datasets_miniworld_canonical_closeout_2026-04-09/review_all_tasks/
-datasets_miniworld_canonical_closeout_2026-04-09/*/*exam*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*canonical*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*probe*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*oracle*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*requests*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*responses*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*scores*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*audit*.jsonl
-datasets_miniworld_canonical_closeout_2026-04-09/*/*summary*.json
-datasets_miniworld_canonical_closeout_2026-04-09/*/*freeze*.md
-datasets_miniworld_canonical_closeout_2026-04-09/*/*freeze*.txt
-datasets_miniworld_canonical_closeout_2026-04-09/*/*prompt*.txt
-datasets_miniworld_canonical_closeout_2026-04-09/*/*manifest*.json
-datasets_miniworld_canonical_closeout_2026-04-09/*/*.bak
-
-# Experimental utility scripts
-scripts/utils/
-
-
-# Local experiment scratch space
-tmp_*/
-tmp/
-tmp_miniworld/
-tmp_v6_*.py
-tmp_memory_global_seed0.png
-tmp_phase12b_ablation.py
-tmp_gemini3_google_*.json
-
-# Phase runs: all experiment output (raw responses, scores, audits)
-runs/
-
-# Canonical datasets: only raw_data/ and exams_* are versioned
-# Trajectory sample directories and audit reports are experiment artifacts
-datasets/raw_data/*/
-datasets/raw_data/**/
-
-# Candidate / experimental dataset artifacts (only canonical datasets/ are versioned)
-datasets/exams_*/
-datasets/*_candidate/
-datasets/*_smoke*/
-datasets/*_subset*/
-
-# Legacy / experimental scripts
-scripts/configs/
-scripts/run_*.sh
-scripts/prepare_*.py
-scripts/merge_*.py
-scripts/build_taskce_*.py
-
-# BUT allow essential infrastructure scripts
-!scripts/env_bootstrap.py
-
-# Additional experimental response / model run artifacts
-datasets_canonical_closeout_2026-04-03/model_runs/
-datasets_canonical_closeout_2026-04-03/review_all_tasks/
-datasets_canonical_closeout_2026-04-03/writer_export/model_runs_minimal/_backups/
-datasets_miniworld_canonical_closeout_2026-04-09/**/responses_*/
-
-# MiniWorld experiment outputs
-datasets_miniworld_canonical_closeout_2026-04-09/taska/responses_*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskc/responses_*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskc/framing_*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskd/responses_*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskd/framing_*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskd/framing_full/tailfill*/
-datasets_miniworld_canonical_closeout_2026-04-09/taskd/framing_full/tailfill2*/
-
-# LLaVA critic baselines (experimental)
-docs/baselines/
-
-# Task B v7 experiment datasets (inside datasets/, not canonical)
-datasets/raw_data_taskb72/
-datasets/raw_data_taskb72_backups/
-
-# Project plan logs (working documents, not paper-facing)
-docs/project_plans/2026-04-13_phase89_kimi_k25_full_run.md
-docs/project_plans/2026-04-25_*.md
-
-# Local API config files that may accidentally contain real keys
-api_keys_for_experiments/
-test_api_for_experiments/
-datasets_miniworld_canonical_closeout_2026-04-09/review_all_tasks/miniworld_audit.html
-
-# ===== NEW TEST RUNS (2026-05-05) =====
-# Test outputs and generated datasets
-outputs/
-tmp/
-datasets/raw_data/
-
-# MiniWorld temp directory
-/miniworld/
-
-# Experimental utility scripts (contains Chinese for internal use)
-scripts/utils/
-
-# Datasets global_views (large binary files, not needed for repo)
-datasets/global_views/
-
-# Retain local integration fixtures and intermediate results without uploading.
-experiments/fixtures*/
-experiments/validation/
-experiments/functional_validation*/
-experiments/additional_validation/
-experiments/generated/
-/Habitat/data/navmeshes/
-/rebuttal_packet/10_minigrid_10x_expansion/
-
-# The original temporary miniworld/ rule must not hide generation source code.
-!scripts/miniworld/
-!scripts/miniworld/*.py
-
-# Local bindings, staged payloads and archives are retained locally, not in Git.
-*.local.json
-.env*
-data/exams/
-dist/
+# Editor settings and crash dumps
+.vscode/
+.idea/
+.DS_Store
+/core
+/core.[0-9]*
