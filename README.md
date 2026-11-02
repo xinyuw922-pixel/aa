@@ -16,6 +16,8 @@
     <a href="https://openreview.net/profile?id=~Wenjun_Lv1">Wenjun Lv</a>,
     <a href="https://openreview.net/profile?id=~Yu_Kang5">Yu Kang</a>
   </p>
+  <p>University of Science and Technology of China</p>
+  <p><strong>NeurIPS 2026 Evaluations and Datasets Track</strong></p>
   <p><sup>*</sup> Equal contribution (co-first authors).</p>
   <p>
     <!-- Add resource links when the paper, project page and dataset URLs are supplied. -->
