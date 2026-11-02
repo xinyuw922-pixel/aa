@@ -1,0 +1,9 @@
+name: gridwm-repro-habitat
+channels:
+  - aihabitat
+  - conda-forge
+dependencies:
+  - python=3.9.23
+  - habitat-sim=0.3.3=py3.9_bullet_linux_acbe6f4922e68145e401e55c30f9dfea460a3f24
+  - numpy=1.26.4
+  - pip

@@ -1,0 +1,15 @@
+{
+  "output_dir": "experiments/generated/habitat/formal_20261101/navigation",
+  "base_seed": 20260725,
+  "max_scenes": 10,
+  "episodes_per_scene": 20,
+  "width": 512,
+  "height": 512,
+  "gpu_device_id": -1,
+  "generate_task_a": false,
+  "enable_physics": true,
+  "navmesh_mode": "load_or_recompute",
+  "navmesh_cache_dir": "experiments/generated/habitat/formal_20261101/navmeshes",
+  "navmesh_include_static_objects": true,
+  "require_overhead_cover": true
+}
