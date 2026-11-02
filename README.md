@@ -1,30 +1,43 @@
-# Towards Reliable VLM Judges: State-Conditional Invariance and Presentation-Aware Diagnostics
+<h1 align="center">
+  Towards Reliable VLM Judges:<br>
+  State-Conditional Invariance and Presentation-Aware Diagnostics
+</h1>
 
-[Qinan Zhang](https://openreview.net/profile?id=~Qinan_Zhang2)<sup>*</sup>, [Xinyu Wang](https://openreview.net/profile?id=~Xinyu_Wang65)<sup>*</sup>, [Qihang Jin](https://openreview.net/profile?id=~Qihang_Jin1)<sup>*</sup>, [Tianyuan Wang](https://openreview.net/profile?id=~Tianyuan_Wang2), [Jian Di](https://openreview.net/profile?id=~Jian_Di1), [Hongbing Luo](https://openreview.net/profile?id=~Hongbing_Luo1), [Pengfei Li](https://openreview.net/profile?id=~Pengfei_Li24), [Wenjun Lv](https://openreview.net/profile?id=~Wenjun_Lv1), [Yu Kang](https://openreview.net/profile?id=~Yu_Kang5)
-
-<sup>*</sup> Equal contribution (co-first authors).
+<div align="center">
+  <p>
+    <a href="https://openreview.net/profile?id=~Qinan_Zhang2">Qinan Zhang<sup>*</sup></a>,
+    <a href="https://openreview.net/profile?id=~Xinyu_Wang65">Xinyu Wang<sup>*</sup></a>,
+    <a href="https://openreview.net/profile?id=~Qihang_Jin1">Qihang Jin<sup>*</sup></a>,
+    <br>
+    <a href="https://openreview.net/profile?id=~Tianyuan_Wang2">Tianyuan Wang</a>,
+    <a href="https://openreview.net/profile?id=~Jian_Di1">Jian Di</a>,
+    <a href="https://openreview.net/profile?id=~Hongbing_Luo1">Hongbing Luo</a>,
+    <a href="https://openreview.net/profile?id=~Pengfei_Li24">Pengfei Li</a>,
+    <a href="https://openreview.net/profile?id=~Wenjun_Lv1">Wenjun Lv</a>,
+    <a href="https://openreview.net/profile?id=~Yu_Kang5">Yu Kang</a>
+  </p>
+  <p><sup>*</sup> Equal contribution (co-first authors).</p>
+  <p>
+    <a href="#installation"><img src="https://img.shields.io/badge/Installation-334155?style=flat-square" alt="Installation"></a>
+    <a href="#quick-start"><img src="https://img.shields.io/badge/Quick_Start-2563eb?style=flat-square" alt="Quick Start"></a>
+    <a href="#experiments"><img src="https://img.shields.io/badge/Experiments-047857?style=flat-square" alt="Experiments"></a>
+  </p>
+</div>
 
 <p align="center">
-  <a href="#overview">Overview</a> &middot;
-  <a href="#quick-start">Quick Start</a> &middot;
-  <a href="#installation">Installation</a> &middot;
-  <a href="#experiments">Experiments</a> &middot;
-  <a href="#model-inference">Model Inference</a> &middot;
-  <a href="#additional-experiments">Additional Experiments</a> &middot;
-  <a href="#repository-layout">Repository Layout</a>
+  <img src="assets/overview.png" alt="GridWM-Judge overview: MiniGrid environments, Full/NoCue/CF variants, five diagnostic tasks and 3D extensions" width="100%">
 </p>
+
+<p align="center"><em>GridWM-Judge: 1,202 base MiniGrid task instances; MiniWorld and Habitat/HSSD extensions are reported separately. Scale-2 is listed below.</em></p>
+
+<details>
+<summary>Abstract</summary>
 
 Vision-language models (VLMs) are increasingly used as automated judges for multimodal and embodied tasks, yet aggregate accuracy or consistency alone does not reveal whether a judge changes its verdict for the right reason. We propose State-Conditional Invariance (SCI), a reliability principle requiring a judge to remain stable under semantics-preserving presentation changes while responding to causal interventions that change the task outcome. We instantiate SCI in GridWM-Judge, a simulator-grounded diagnostic benchmark built from deterministic MiniGrid trajectories with aligned Full, evidence-removal, and counterfactual variants, plus presentation and representation probes. Across five diagnostic tasks, GridWM-Judge tests local perception, action-conditioned transitions, presentation stability, representation exchangeability, and Full-CF causal discrimination. Evaluating current VLM judges reveals separable failures, including presentation sensitivity, representation fragility, causal misgrounding, action-insensitive heuristics, and stability traps. These results show that reliable VLM-as-a-judge evaluation requires joint reporting of correctness, presentation invariance, and causal sensitivity rather than a single accuracy or consistency score.
 
+</details>
+
 ## Overview
-
-<p align="center"><em>Overview figure placeholder</em></p>
-
-<!-- Replace the placeholder above with the overview figure when supplied. -->
-
-```text
-Simulator trajectories → Images and exams → Model responses → Scores and CIs
-```
 
 | Dataset | Tasks | Formal Questions |
 | --- | --- | --- |

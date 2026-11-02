@@ -30,6 +30,7 @@ venv/
 *.log
 *.jsonl
 *.png
+!/assets/overview.png
 *.jpg
 *.jpeg
 *.mp4
