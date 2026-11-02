@@ -18,17 +18,18 @@
   </p>
   <p><sup>*</sup> Equal contribution (co-first authors).</p>
   <p>
-    <a href="#installation"><img src="https://img.shields.io/badge/Installation-334155?style=flat-square" alt="Installation"></a>
-    <a href="#quick-start"><img src="https://img.shields.io/badge/Quick_Start-2563eb?style=flat-square" alt="Quick Start"></a>
-    <a href="#experiments"><img src="https://img.shields.io/badge/Experiments-047857?style=flat-square" alt="Experiments"></a>
+    <!-- Add resource links when the paper, project page and dataset URLs are supplied. -->
+    <img src="https://img.shields.io/badge/arXiv-Paper-b31b1b" alt="arXiv">
+    <img src="https://img.shields.io/badge/Project_Page-GridWM--Judge-green" alt="Project Page">
+    <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-blue" alt="Hugging Face Dataset">
   </p>
 </div>
 
 <p align="center">
-  <img src="assets/overview.png" alt="GridWM-Judge overview: MiniGrid environments, Full/NoCue/CF variants, five diagnostic tasks and 3D extensions" width="100%">
+  <img src="assets/overview_concept.jpg" alt="GridWM-Judge overview: aligned trajectories, presentation and representation probes, and counterfactual judgments" width="100%">
 </p>
 
-<p align="center"><em>GridWM-Judge: 1,202 base MiniGrid task instances; MiniWorld and Habitat/HSSD extensions are reported separately. Scale-2 is listed below.</em></p>
+<p align="center"><em>GridWM-Judge: aligned trajectories, presentation probes, and counterfactual judgments.</em></p>
 
 <details>
 <summary>Abstract</summary>

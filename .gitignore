@@ -32,6 +32,7 @@ venv/
 *.png
 !/assets/overview.png
 *.jpg
+!/assets/overview_concept.jpg
 *.jpeg
 *.mp4
 *.pdf
