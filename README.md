@@ -20,9 +20,9 @@
   <p>University of Science and Technology of China</p>
   <p><strong>NeurIPS 2026 Evaluations and Datasets Track</strong></p>
   <p>
-    <!-- Add resource links when the paper, project page and dataset URLs are supplied. -->
+    <!-- Add paper and dataset links when their URLs are supplied. -->
     <img src="https://img.shields.io/badge/arXiv-Paper-b31b1b" alt="arXiv">
-    <img src="https://img.shields.io/badge/Project_Page-GridWM--Judge-green" alt="Project Page">
+    <a href="https://xinyuw922-pixel.github.io/aa/"><img src="https://img.shields.io/badge/Project_Page-GridWM--Judge-green" alt="Project Page"></a>
     <img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-blue" alt="Hugging Face Dataset">
   </p>
 </div>
