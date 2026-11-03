@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="State-Conditional Invariance for reliable VLM judges. Explore real simulator-grounded GridWM-Judge examples.">
+  <title>Towards Reliable VLM Judges · GridWM-Judge</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="assets/lucide.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-nav"><nav aria-label="Main navigation"><a href="#principle">Overview</a><a href="#benchmark">Examples</a><a href="#resources">Resources</a></nav></header>
+  <main>
+    <section class="publication">
+      <h1>Towards Reliable VLM Judges:</h1>
+      <p class="paper-subtitle">State-Conditional Invariance and<br class="desktop-break"> Presentation-Aware Diagnostics</p>
+      <div class="authors"><a href="https://openreview.net/profile?id=~Qinan_Zhang2">Qinan Zhang<sup>*</sup></a><a href="https://openreview.net/profile?id=~Xinyu_Wang65">Xinyu Wang<sup>*</sup></a><a href="https://openreview.net/profile?id=~Qihang_Jin1">Qihang Jin<sup>*</sup></a><span class="author-break" aria-hidden="true"></span><a href="https://openreview.net/profile?id=~Tianyuan_Wang2">Tianyuan Wang</a><a href="https://openreview.net/profile?id=~Jian_Di1">Jian Di</a><a href="https://openreview.net/profile?id=~Hongbing_Luo1">Hongbing Luo</a><a href="https://openreview.net/profile?id=~Pengfei_Li24">Pengfei Li</a><a href="https://openreview.net/profile?id=~Wenjun_Lv1">Wenjun Lv</a><a href="https://openreview.net/profile?id=~Yu_Kang5">Yu Kang</a></div>
+      <p class="equal"><sup>*</sup> Equal contribution</p>
+      <p class="affiliation">University of Science and Technology of China</p>
+      <p class="venue">NeurIPS 2026 Evaluations and Datasets Track</p>
+      <div class="resource-buttons"><button class="button" disabled title="arXiv URL pending"><i data-lucide="file-text"></i> arXiv</button><a class="button primary" href="https://github.com/xinyuw922-pixel/aa" target="_blank" rel="noreferrer"><i data-lucide="github"></i> Code</a><button class="button" disabled title="Hugging Face URL pending"><img src="assets/huggingface.svg" alt="" width="18" height="18"> Hugging Face</button></div>
+    </section>
+
+    <section id="principle" class="principle section">
+      <div class="section-heading"><div><p class="eyebrow">THE RELIABILITY PRINCIPLE</p><h2>Stable when it should be.<br> Sensitive when it matters.</h2></div><p class="section-intro">Presentation can change without changing the task outcome. A causal intervention cannot. A reliable judge must distinguish the two.</p></div>
+      <figure class="overview-figure"><a href="assets/overview.jpg" target="_blank" rel="noreferrer"><img src="assets/overview.jpg" alt="GridWM-Judge overview: presentation invariance, action-conditioned dynamics, representation exchangeability and causal sensitivity" width="1862" height="845"></a></figure>
+      <h3 class="example-heading">A real Full / NoCue / CF example</h3>
+      <div class="triplet" id="triplet" aria-label="Full, NoCue and CF from one real trajectory"><p class="loading">Loading recorded examples…</p></div>
+      <div class="triplet-caption"><span><span class="small-dot"></span> Same source group · simulator-grounded answers</span><code id="showcase-source"></code></div>
+    </section>
+
+    <section id="benchmark" class="section benchmark">
+      <div class="section-heading"><div><p class="eyebrow">INSIDE THE BENCHMARK</p><h2>One benchmark. Five diagnostics.</h2></div><p class="section-intro">From local observations to trajectory-level decisions, inspect the evidence behind each question.</p></div>
+      <div class="task-tabs" role="tablist" aria-label="Diagnostic task">
+        <button role="tab" data-task="A" aria-selected="false"><span>A</span> Transitions</button>
+        <button role="tab" data-task="B" aria-selected="false"><span>B</span> Perception</button>
+        <button role="tab" data-task="C" aria-selected="true"><span>C</span> Trajectory judgment</button>
+        <button role="tab" data-task="D" aria-selected="false"><span>D</span> Reference judgment</button>
+        <button role="tab" data-task="E" aria-selected="false"><span>E</span> State tracking</button>
+      </div>
+      <div class="explorer" id="explorer" aria-busy="true">
+        <div class="filters">
+          <label>Environment<select id="environment" aria-label="Environment"></select></label>
+          <label class="case-field">Example<select id="case" aria-label="Example"></select></label>
+          <label>Variant<select id="variant" aria-label="Variant"></select></label>
+          <label>Presentation<select id="style" aria-label="Presentation"></select></label>
+        </div>
+        <div class="evidence-toolbar"><div class="view-mode" role="group" aria-label="Evidence representation"><button id="composite" aria-pressed="true">Composite</button><button id="split" aria-pressed="false">Split</button></div><span id="evidence-label" class="muted"></span><div class="icon-tools"><button id="previous" class="icon-button" aria-label="Previous example" title="Previous example"><i data-lucide="arrow-left"></i></button><button id="next" class="icon-button" aria-label="Next example" title="Next example"><i data-lucide="arrow-right"></i></button><button id="share" class="icon-button" aria-label="Copy example link" title="Copy example link"><i data-lucide="link"></i></button></div></div>
+        <div id="evidence" class="evidence" aria-live="polite"></div>
+        <div class="question-area"><div class="prompt-area"><p class="eyebrow">QUESTION · ORIGINAL PROMPT</p><details id="prompt-details" open><summary id="question-label">Task goal and response contract</summary><pre id="prompt"></pre></details></div><div class="answer-area"><p class="eyebrow">SIMULATOR GROUND TRUTH</p><button id="reveal" class="button"><i data-lucide="eye"></i> Reveal answer</button><pre id="answer" hidden></pre><p id="answer-status" class="answer-status"></p></div></div>
+        <div class="source-bar"><span id="sample-counter"></span><code id="source-uid"></code><a id="original-image" href="#" target="_blank" rel="noreferrer" title="Open original image">Original image <i data-lucide="external-link"></i></a></div>
+      </div>
+      <p class="dataset-caption">Curated examples from a freshly generated base exam: A 103 · B 144 · C 486 · D 144 · E 325. Answers are simulator labels, not model predictions.</p>
+    </section>
+
+    <section class="section diagnostic-section"><div class="section-heading"><div><p class="eyebrow">BEYOND A SINGLE SCORE</p><h2>Correctness is only one axis.</h2></div></div><div class="diagnostics"><article><span class="number">01</span><h3>Correctness</h3><p>Does the verdict agree with the simulator-grounded task outcome?</p></article><article><span class="number">02</span><h3>Presentation invariance</h3><p>Does the judgment survive semantics-preserving changes to the evidence interface?</p></article><article><span class="number">03</span><h3>Causal sensitivity</h3><p>Does the judgment respond when an intervention changes the task outcome?</p></article></div></section>
+
+    <section id="resources" class="section resources"><div><p class="eyebrow">REPRODUCIBLE BY CONSTRUCTION</p><h2>From trajectories to verdicts.</h2><p>Generate images, build exams, collect responses and score them with the same pipeline.</p></div><a class="button primary" href="https://github.com/xinyuw922-pixel/aa" target="_blank" rel="noreferrer">Explore the code <i data-lucide="arrow-up-right"></i></a></section>
+    <footer><span>GridWM-Judge · State-Conditional Invariance</span><span>University of Science and Technology of China</span></footer>
+  </main>
+  <dialog id="image-dialog"><div class="dialog-toolbar"><span id="dialog-title">Original evidence</span><button id="close-dialog" class="icon-button" aria-label="Close image" title="Close"><i data-lucide="x"></i></button></div><img id="dialog-image" alt="Original exam evidence"></dialog>
+  <div id="toast" role="status" hidden></div>
+</body>
+</html>
