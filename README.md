@@ -21,7 +21,7 @@
   <p><strong>NeurIPS 2026 Evaluations and Datasets Track</strong></p>
   <p>
     <img src="https://img.shields.io/badge/arXiv-Paper-b31b1b" alt="arXiv">
-    <a href="https://xinyuw922-pixel.github.io/aa/"><img src="https://img.shields.io/badge/Project_Page-GridWM--Judge-green" alt="Project Page"></a>
+    <a href="https://xinyuw922-pixel.github.io/aa/"><img src="https://img.shields.io/badge/Project_Page-Towards_Reliable_VLM_Judges-green" alt="Project Page"></a>
     <a href="https://huggingface.co/datasets/nahco318/Towards-Reliable-VLM-Judges"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-blue" alt="Hugging Face Dataset"></a>
   </p>
 </div>
